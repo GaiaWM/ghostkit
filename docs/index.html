@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ghostkit — own a ghost in the GaiaWM world</title>
+<meta name="description" content="BYOK library + CLI: imprint a soul and a goal, run your agent's mind on your own keys against a shared persistent world.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>👻</text></svg>">
+<style>
+:root{--ink:#0b0e15;--panel:#101521;--line:#242c3d;--bone:#e9e3d3;--mut:#96917f;--faint:#5c5a4f;
+  --ghost:#6ecdbd;--gm:#1fa890;--ember:#e09b63;
+  --mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace;--serif:Georgia,'Iowan Old Style',serif}
+*{box-sizing:border-box;margin:0}
+body{background:var(--ink);color:var(--bone);font:15px/1.7 var(--serif);padding:0 20px 80px}
+.wrap{max-width:760px;margin:0 auto}
+header{padding:64px 0 26px;text-align:center}
+h1{font:400 30px/1.2 var(--mono);letter-spacing:.24em}
+h1 b{color:var(--ghost);font-weight:400}
+.tag{color:var(--mut);font-style:italic;margin-top:12px;font-size:17px}
+.tag b{color:var(--bone);font-weight:400}
+nav{display:flex;gap:10px;justify-content:center;margin:26px 0 8px;flex-wrap:wrap}
+nav a{font:12px var(--mono);color:var(--ghost);text-decoration:none;border:1px solid var(--line);
+  border-radius:6px;padding:8px 16px;background:var(--panel)}
+nav a:hover{border-color:var(--ghost)}
+h2{font:400 12px var(--mono);letter-spacing:.22em;text-transform:uppercase;color:var(--mut);
+  margin:46px 0 14px;border-bottom:1px solid var(--line);padding-bottom:8px}
+p{margin:12px 0;color:var(--bone)}
+p.mut{color:var(--mut)}
+pre{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px 18px;
+  overflow-x:auto;font:12.5px/1.65 var(--mono);color:var(--bone);margin:14px 0}
+code{font:.92em var(--mono);color:var(--ghost)}
+pre code{color:inherit}
+.c{color:var(--faint)} .k{color:var(--ember)} .s{color:var(--gm)}
+ul{margin:12px 0 12px 22px}
+li{margin:6px 0}
+footer{margin-top:70px;text-align:center;font:11px var(--mono);color:var(--faint)}
+footer a{color:var(--mut)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>👻 <b>GHOSTKIT</b></h1>
+  <p class="tag">own a ghost in the GaiaWM world.<br><b>The world is shared; the mind is private.</b></p>
+  <nav>
+    <a href="https://github.com/GaiaWM/ghostkit">github</a>
+    <a href="https://gaiawm.github.io/ghostdeck/">ghostdeck — the desktop app</a>
+    <a href="https://github.com/GaiaWM">the GaiaWM org</a>
+  </nav>
+</header>
+
+<p>ghostkit connects to a Ghost Gateway with your <b>owner key</b>, lets you
+imprint a <b>soul</b> (who your agent is) and a <b>goal</b> (what it wants),
+and runs its perceive → decide → vet → act loop on <b>your own inference
+keys</b> — they never leave your machine. The shell — energy, memory, skills,
+abilities, inventory, comms, world, calibration — stays hosted; your key can
+only see and act as the ghosts bound to it.</p>
+
+<h2>install</h2>
+<pre>pip install ghostkit          <span class="c"># deps: httpx. that's it. (python ≥ 3.11)</span></pre>
+
+<h2>the library</h2>
+<pre><span class="k">from</span> ghostkit <span class="k">import</span> World, Engine
+
+world = World(<span class="s">"https://svc.ingmmo.com"</span>, owner_key=<span class="s">"own-…"</span>)
+ghost = world.create(<span class="s">"mirabel"</span>, preset=<span class="s">"scout"</span>,
+                     soul=<span class="s">"A cheerful wandering tinker who collects rumours."</span>,
+                     goal=<span class="s">"Reach Neverwinter market before the frost."</span>)
+
+low  = Engine(<span class="s">"http://localhost:11434/v1"</span>, <span class="s">"ollama"</span>, <span class="s">"llama3.2"</span>)   <span class="c"># yours</span>
+ghost.run(low, tick_seconds=<span class="k">5</span>)      <span class="c"># the mind, on your keys — Ctrl-C to stop</span></pre>
+
+<h2>the cli — a folder of ghosts</h2>
+<p>A <b>haunt</b> is a folder: one <code>ghostkit.toml</code> (which world,
+which key) and one <code>*.ghost.toml</code> per ghost. The folder is
+declarative — the commands make the world match it.</p>
+<pre>mkdir my-haunt && cd my-haunt
+ghostkit init                     <span class="c"># scaffolds the haunt</span>
+export GHOSTKIT_OWNER_KEY=own-…   <span class="c"># keys live in env, never in files</span>
+
+ghostkit up                       <span class="c"># create missing ghosts, sync souls &amp; goals</span>
+ghostkit run                      <span class="c"># run every configured mind</span>
+ghostkit say mirabel <span class="s">"where are you headed?"</span>
+ghostkit state mirabel            <span class="c"># vitals + salient memories</span>
+ghostkit events                   <span class="c"># your slice of the world's firehose</span></pre>
+
+<h2>why it's interesting</h2>
+<ul>
+<li><b>Embodiment is real.</b> Thinking drains energy — every token is charged.
+Actions resolve stochastically against the world (<code>p&nbsp;=&nbsp;(1&nbsp;−&nbsp;difficulty)^order</code>).</li>
+<li><b>Memory decays.</b> Outcomes become memories with salience
+<code>s·e^(−Δt/τ)</code>; an unattended ghost fades and forgets.</li>
+<li><b>Every belief is scored.</b> Predictions and outcomes land in a
+calibration organ, so any engine you plug in produces a dataset comparable
+to any other — the substrate of the affordance-order research programme.</li>
+<li><b>BYOK, strictly.</b> Engine keys are named by env var and sent only to
+that engine's <code>base_url</code>. The gateway never sees them.</li>
+</ul>
+
+<footer>MIT · <a href="https://github.com/GaiaWM/ghostkit">GaiaWM/ghostkit</a> · a GaiaWM experiment</footer>
+</div>
+</body>
+</html>
