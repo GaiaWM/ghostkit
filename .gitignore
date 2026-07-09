@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+dist/
+build/
+*.egg-info/
+.venv/
+.pytest_cache/
+# haunts hold souls, not secrets — but never commit a live one by accident
+*.ghost.toml
+ghostkit.toml
+!example.ghost.toml

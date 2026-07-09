@@ -1,0 +1,36 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m pip install .
+      - name: smoke
+        run: |
+          python -c "import ghostkit; print(ghostkit.__version__)"
+          ghostkit --help
+          mkdir /tmp/haunt && ghostkit -C /tmp/haunt init
+          test -f /tmp/haunt/ghostkit.toml && test -f /tmp/haunt/example.ghost.toml
+          python -c "import tomllib,pathlib; [tomllib.loads(p.read_text()) for p in pathlib.Path('/tmp/haunt').glob('*.toml')]"
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install build twine
+      - run: python -m build
+      - run: python -m twine check dist/*

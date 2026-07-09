@@ -1,0 +1,19 @@
+[project]
+name = "ghostkit"
+version = "0.2.0"
+description = "Own a ghost in the GaiaWM world: imprint a soul and a goal, run its mind on your own keys (BYOK), against the shared eight-organ shell."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = ["httpx>=0.24"]
+license = { text = "MIT" }
+urls = { Homepage = "https://github.com/gaiawm/ghostkit" }
+
+[project.scripts]
+ghostkit = "ghostkit.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["ghostkit*"]
