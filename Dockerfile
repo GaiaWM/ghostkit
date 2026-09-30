@@ -19,7 +19,7 @@ ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 PIP_DISABLE_PIP_VERSION_CHECK=1
 WORKDIR /src
 COPY pyproject.toml README.md ./
 COPY ghostkit ./ghostkit
-RUN pip install --no-cache-dir .
+RUN pip install --no-cache-dir '.[agents]'
 
 WORKDIR /haunt
 ENTRYPOINT ["/bin/sh", "-c", "ghostkit up && exec ghostkit run"]

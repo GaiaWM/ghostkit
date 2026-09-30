@@ -91,6 +91,35 @@ Engine keys are named by env var and read at run time — they go only to
 that engine's `base_url`, never to the gateway. `ghostkit up` treats the
 file as the truth: soul and goal are synced to what the file says.
 
+## Agent folders as ghosts
+
+A haunt can also breathe ghosts written as **agent folders** — the same
+markdown-with-frontmatter format the custodial GaiaWM stack uses for its
+`agents/<name>/` definitions: a `character.md` whose body is the soul, plus
+optional `skills.md`, `inventory.md`, `memories.md` and `lore/*.md`. Any
+subdirectory of the haunt with a `character.md` counts, and `ghostkit.toml`
+can point at a whole folder of them:
+
+```toml
+agents_dir = "../agents"     # every subfolder with a character.md is a ghost
+
+[engine.low]                 # haunt-level default mind — agent folders
+base_url = "http://localhost:11434/v1"   # usually don't bring their own
+model = "llama3.2"
+```
+
+`ghostkit up` then does more than imprint: on **first creation** it seeds
+the ghost's birth-time state through the organ proxy — skills replace the
+preset's, the inventory replaces the preset kit, memories (and each lore
+file) are remembered at their written salience. The folder is the birth
+certificate, not a reset button: a living ghost's acquired skills, loot and
+memories are never clobbered by a later `up`, which goes back to syncing
+soul and goal only. Spawn coordinates in the file are noted but not applied
+(placing a body is custodial — an owner key cannot teleport), and an id that
+exists in the world but is bound to someone else's key is skipped with a
+`✋`, never touched. Parsing needs `pip install 'ghostkit[agents]'` (the
+docker image includes it).
+
 ## The headless runner (docker)
 
 The repo's `Dockerfile` builds `gaiawm-ghost` — a pure, independent runner:

@@ -8,6 +8,10 @@ dependencies = ["httpx>=0.24"]
 license = { text = "MIT" }
 urls = { Homepage = "https://github.com/gaiawm/ghostkit" }
 
+[project.optional-dependencies]
+# agent folders as ghosts (character.md + YAML frontmatter) need a YAML parser
+agents = ["pyyaml>=6"]
+
 [project.scripts]
 ghostkit = "ghostkit.cli:main"
 

@@ -26,6 +26,7 @@ import time
 import tomllib
 from pathlib import Path
 
+from ghostkit.agentdir import is_agent_dir, load_agent_dir
 from ghostkit.client import Ghost, GhostKitError, World
 from ghostkit.engine import Engine
 
@@ -37,6 +38,17 @@ _WORLD_TEMPLATE = """\
 gateway = "https://svc.ingmmo.com"
 # the owner key is read from this env var (never write keys into files):
 owner_key_env = "GHOSTKIT_OWNER_KEY"
+
+# Ghosts can also be AGENT FOLDERS (character.md + skills/inventory/memories
+# in markdown, the gaia_agent format): any subdirectory of this haunt with a
+# character.md counts, and/or point at a folder of them:
+# agents_dir = "../agents"
+
+# Default mind for ghosts that don't bring their own engines (agent folders
+# usually don't). Same shape as a ghost file's [engine.low]/[engine.high]:
+# [engine.low]
+# base_url = "http://localhost:11434/v1"
+# model = "llama3.2"
 """
 
 _GHOST_TEMPLATE = """\
@@ -83,20 +95,51 @@ def _load_toml(path: Path) -> dict:
 
 
 def load_haunt(folder: Path) -> tuple[dict, dict[str, dict]]:
-    """(world config, {ghost_id: ghost config}) for a haunt folder."""
+    """(world config, {ghost_id: ghost config}) for a haunt folder.
+
+    Ghosts come from two kinds of source: ``*.ghost.toml`` files, and **agent
+    folders** — directories holding a ``character.md`` in the gaia_agent
+    markdown format (see ghostkit.agentdir), found as subdirectories of the
+    haunt and/or under the ``agents_dir`` path named in ghostkit.toml.
+    """
     wf = folder / WORLD_FILE
     if not wf.exists():
         raise _die(f"no {WORLD_FILE} here — run `ghostkit init` first (folder: {folder})")
     world = _load_toml(wf)
     ghosts: dict[str, dict] = {}
+
+    def _add(gid: str, cfg: dict, src: str) -> None:
+        if not gid:
+            raise _die(f"{src}: empty ghost id")
+        if gid in ghosts:
+            raise _die(f"duplicate ghost id {gid!r} ({src})")
+        ghosts[gid] = cfg
+
     for path in sorted(folder.glob(f"*{GHOST_SUFFIX}")):
         cfg = _load_toml(path)
-        gid = str(cfg.get("id") or path.name[: -len(GHOST_SUFFIX)]).strip()
-        if not gid:
-            raise _die(f"{path.name}: empty ghost id")
-        if gid in ghosts:
-            raise _die(f"duplicate ghost id {gid!r} ({path.name})")
-        ghosts[gid] = cfg
+        _add(str(cfg.get("id") or path.name[: -len(GHOST_SUFFIX)]).strip(), cfg, path.name)
+
+    roots = [p for p in sorted(folder.iterdir()) if p.is_dir() and is_agent_dir(p)]
+    extra = str(world.get("agents_dir") or "").strip()
+    if extra:
+        base = (folder / extra).resolve()
+        if not base.is_dir():
+            raise _die(f"{WORLD_FILE}: agents_dir {extra!r} is not a directory ({base})")
+        if is_agent_dir(base):
+            roots.append(base)
+        roots += [p for p in sorted(base.iterdir()) if p.is_dir() and is_agent_dir(p)]
+    for p in roots:
+        gid, cfg = load_agent_dir(p)
+        _add(gid, cfg, str(p))
+
+    # haunt-level default engines: any ghost without its own [engine.low]/
+    # [engine.high] inherits the haunt's — how markdown agents get a mind.
+    defaults = world.get("engine") or {}
+    if defaults:
+        for cfg in ghosts.values():
+            eng = dict(defaults)
+            eng.update(cfg.get("engine") or {})
+            cfg["engine"] = eng
     return world, ghosts
 
 
@@ -139,8 +182,40 @@ def _pick(cfgs: dict[str, dict], ids: list[str]) -> dict[str, dict]:
         return cfgs
     missing = [i for i in ids if i not in cfgs]
     if missing:
-        raise _die(f"no *{GHOST_SUFFIX} config for: {', '.join(missing)}")
+        raise _die(f"no ghost config (toml or agent folder) for: {', '.join(missing)}")
     return {i: cfgs[i] for i in ids}
+
+
+def _seed(ghost: Ghost, seed: dict) -> None:
+    """Apply an agent folder's birth-time state through the organ proxy.
+
+    Runs once, at creation — the folder is the birth certificate, not a
+    reset button; a living ghost's acquired skills, loot and memories are
+    never clobbered by a later `up`.
+    """
+    try:
+        skills = seed.get("skills") or {}
+        if skills:
+            ghost.organ("skills", "init_skills", skills=skills)
+            print(f"  ⚒ {len(skills)} skill(s)")
+        items = seed.get("items") or []
+        if items:
+            ghost.organ("inventory", "clear_inventory")  # the folder replaces the preset kit
+            for it in items:
+                ghost.organ("inventory", "add_to_inventory", item=it)
+            print(f"  🎒 {len(items)} item(s)")
+        mems = seed.get("memories") or []
+        for m in mems:
+            ghost.organ("memory", "remember",
+                        content=str(m.get("content") or ""),
+                        salience=float(m.get("salience", 0.6)),
+                        kind=str(m.get("kind", "knowledge")))
+        if mems:
+            print(f"  ◦ {len(mems)} memori{'es' if len(mems) != 1 else 'y'}")
+        if seed.get("spawn"):
+            print("  ⚐ spawn coords in the file are noted only — placement is custodial")
+    except GhostKitError as exc:
+        print(f"  ✋ seeding stopped: {exc}", file=sys.stderr)
 
 
 # -- commands ------------------------------------------------------------------
@@ -191,15 +266,22 @@ def cmd_up(args) -> None:
     for gid, cfg in cfgs.items():
         soul = str(cfg.get("soul") or "").strip()
         goal = str(cfg.get("goal") or "").strip()
-        if gid not in have:
-            world.create(gid, preset=str(cfg.get("preset") or "adventurer"),
-                         soul=soul, goal=goal)
-            print(f"✚ created {gid}")
-        elif (have[gid].get("soul") or "").strip() != soul or (have[gid].get("goal") or "").strip() != goal:
-            Ghost(world, gid).imprint(soul=soul, goal=goal)
-            print(f"✎ imprinted {gid}")
-        else:
-            print(f"· {gid} up to date")
+        try:
+            if gid not in have:
+                world.create(gid, preset=str(cfg.get("preset") or "adventurer"),
+                             soul=soul, goal=goal)
+                print(f"✚ created {gid}")
+                if cfg.get("seed"):
+                    _seed(Ghost(world, gid), cfg["seed"])
+            elif (have[gid].get("soul") or "").strip() != soul or (have[gid].get("goal") or "").strip() != goal:
+                Ghost(world, gid).imprint(soul=soul, goal=goal)
+                print(f"✎ imprinted {gid}")
+            else:
+                print(f"· {gid} up to date")
+        except GhostKitError as exc:
+            # e.g. the id exists in the world but is not bound to this key —
+            # someone else's ghost keeps its life; the haunt moves on.
+            print(f"✋ {gid}: {exc}", file=sys.stderr)
 
 
 def cmd_run(args) -> None:
