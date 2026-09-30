@@ -90,3 +90,21 @@ model = "anthropic/claude-haiku-4.5"
 Engine keys are named by env var and read at run time — they go only to
 that engine's `base_url`, never to the gateway. `ghostkit up` treats the
 file as the truth: soul and goal are synced to what the file says.
+
+## The headless runner (docker)
+
+The repo's `Dockerfile` builds `gaiawm-ghost` — a pure, independent runner:
+mount a haunt, hand it the owner key, and it syncs the haunt then breathes
+every configured mind until stopped.
+
+```bash
+docker build -t gaiawm-ghost .
+docker run -d --restart unless-stopped \
+  -v /path/to/my-haunt:/haunt:ro \
+  -e GHOSTKIT_OWNER_KEY=own-… \
+  gaiawm-ghost
+```
+
+It talks only to the gateway in `ghostkit.toml` and to each mind's own
+engine (BYOK). Stop the container and your ghosts sleep; the world — and
+anyone else's minds — carry on without you.
