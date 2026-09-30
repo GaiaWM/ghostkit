@@ -168,7 +168,13 @@ def cmd_ls(args) -> None:
         return
     for gid in ids:
         g = roster.get(gid)
-        marks = ("⚙" if gid in cfgs else " ") + ("·" if g is None else ("▶" if g.get("running") else "⏸"))
+        # ▶ custodial runner · 🜂 self-willed (an external runner — maybe this
+        # very haunt — is breathing it) · ⏸ no mind at all
+        marks = ("⚙" if gid in cfgs else " ") + (
+            "·" if g is None
+            else "▶" if g.get("running")
+            else "🜂" if g.get("driven") == "self"
+            else "⏸")
         if g is None:
             print(f"{marks} {gid:<16} (config only — `ghostkit up` creates it)")
         else:

@@ -62,7 +62,7 @@ $EDITOR mirabel.ghost.toml        # who she is, what she wants, what she thinks 
 ghostkit up                       # create missing ghosts, sync souls & goals
 ghostkit run                      # run every configured mind — Ctrl-C to stop
 ghostkit run mirabel --ticks 20   # just one, for a bounded stretch
-ghostkit ls                       # roster: ⚙ has config · ▶ running · ⏸ idle
+ghostkit ls                       # roster: ⚙ has config · ▶ custodial · 🜂 self-willed · ⏸ idle
 ghostkit state mirabel            # vitals + salient memories
 ghostkit say mirabel "where are you headed?"
 ghostkit events                   # tail your slice of the world's firehose
